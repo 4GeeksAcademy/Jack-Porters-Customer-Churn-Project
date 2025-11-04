@@ -80,29 +80,40 @@ if uploaded_file:
                             textcoords='offset points')
             st.pyplot(fig)
 
-    with col2:
-        if "tenure" in df_result.columns and "Predicted Tenure (Months)" in df_result.columns:
-            st.markdown("**Total Tenure Prediction**")
+    
+    if "Predicted Tenure (Months)" in df_result.columns and not df_result.empty:
+        col1, col2 = st.columns(2)
+        with col2:
+            st.markdown("**📈 Total Tenure Prediction**")
             fig, ax = plt.subplots()
             ax.scatter(df_result["tenure"], df_result["Predicted Tenure (Months)"], alpha=0.4, label="Predictions")
-            ax.plot([0, 80], [0, 80], 'r--', label="Ideal Fit")
-            z = np.polyfit(df_result["tenure"], df_result["Predicted Tenure (Months)"], 1)
-            p = np.poly1d(z)
-            ax.plot(df_result["tenure"], p(df_result["tenure"]), "g-", label="Trend Line")
+
+            # Add ideal fit line
+            ax.plot([0, df_result["tenure"].max()], [0, df_result["tenure"].max()], 'r--', label="Ideal Fit")
+
+            # Add regression trend line (only if enough data exists)
+            if len(df_result) > 1:
+                z = np.polyfit(df_result["tenure"], df_result["Predicted Tenure (Months)"], 1)
+                p = np.poly1d(z)
+                ax.plot(df_result["tenure"], p(df_result["tenure"]), 'g-', label="Trend Line")
+
             ax.set_xlabel("True Tenure (Months)")
             ax.set_ylabel("Predicted Tenure (Months)")
             ax.set_title("True vs. Predicted Tenure")
             ax.legend()
             st.pyplot(fig)
 
-            r2 = r2_score(df_result["tenure"], df_result["Predicted Tenure (Months)"])
-            st.markdown(f"""
-            **Insight:**
-            This chart compares actual vs. predicted tenure.
-            - The green line is the model's trend in predicting tenure.
-            - The red dashed line is the ideal 1:1 prediction.
-            - R² Score: **{r2:.2f}** — Higher is better. Indicates the model's accuracy in predicting tenure.
-            """)
+            # Add dynamic insight with R²
+            if len(df_result) > 1:
+                r2 = r2_score(df_result["tenure"], df_result["Predicted Tenure (Months)"])
+                st.markdown(f"""
+                **Insight:**
+                - This chart compares actual tenure to predicted.
+                - The green trend line indicates prediction direction; red dashed line is perfect prediction.
+                - R² Score: `{r2:.2f}` — Indicates {'strong' if r2 > 0.7 else 'moderate' if r2 > 0.4 else 'weak'} model accuracy.
+                """)
+            else:
+                st.info("Not enough data points to compute trend line or insights.")
 
     # --- Download ---
     csv = df_result.to_csv(index=False).encode("utf-8")
